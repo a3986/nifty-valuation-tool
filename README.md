@@ -57,7 +57,7 @@ The application uses the **Compound Annual Growth Rate (CAGR)** formula to proje
 Since this is a standalone HTML file, no complex installation is required.
 
 1. **Clone or Download**:  
-   git clone \[https://github.com/yourusername/nifty-valuation-tool.git\](https://github.com/yourusername/nifty-valuation-tool.git)  
+   git clone \[https://github.com/a3986/nifty-valuation-tool.git\](https://github.com/a3986/nifty-valuation-tool.git)  
    \# OR simply download the index.html file
 
 2. **Run**:  

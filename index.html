@@ -32,12 +32,22 @@
         .animate-pulse-fast {
             animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-
-        /* Gradient Text */
-        .text-gradient {
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        
+        /* Toggle Chip Styles */
+        .rate-chip {
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .rate-chip.active {
+            background-color: #dbeafe; /* blue-100 */
+            border-color: #3b82f6; /* blue-500 */
+            color: #1e40af; /* blue-800 */
+            font-weight: 600;
+        }
+        .rate-chip.inactive {
+            background-color: #f3f4f6; /* gray-100 */
+            border-color: #e5e7eb; /* gray-200 */
+            color: #9ca3af; /* gray-400 */
         }
     </style>
 </head>
@@ -55,25 +65,36 @@
                     <p class="text-gray-500 text-sm mt-1">Is the market Cheap or Costly? Analysis based on historical CAGRs.</p>
                 </div>
                 
-                <div class="mt-6 flex flex-col sm:flex-row gap-4 bg-blue-50 p-4 rounded-lg border border-blue-100 relative">
-                    <!-- Fetch Button -->
-                    <button onclick="fetchNiftyData()" class="absolute -top-3 right-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded-full shadow-sm transition-colors flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh Data
-                    </button>
+                <div class="mt-6 flex flex-col gap-4">
+                    <!-- Filters -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mr-2">Projected Growth Rates:</span>
+                        <div id="rateToggles" class="flex flex-wrap gap-2">
+                            <!-- Toggles injected by JS -->
+                        </div>
+                    </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-blue-800 uppercase mb-1">Current Date</label>
-                        <input type="date" id="currentDateInput" readonly class="w-full sm:w-40 px-3 py-2 border border-gray-300 bg-gray-100 text-gray-500 rounded-md cursor-not-allowed focus:outline-none text-sm font-medium">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-blue-800 uppercase mb-1">Current Nifty Level</label>
-                        <input type="number" id="currentNiftyInput" class="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-gray-900 font-mono">
-                    </div>
-                    <div class="flex-grow flex items-end justify-end">
-                         <div id="statusMessage" class="text-xs text-right text-gray-500 h-4"></div>
+                    <!-- Live Inputs -->
+                    <div class="flex flex-col sm:flex-row gap-4 bg-blue-50 p-4 rounded-lg border border-blue-100 relative">
+                        <!-- Fetch Button -->
+                        <button onclick="fetchNiftyData()" class="absolute -top-3 right-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded-full shadow-sm transition-colors flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Refresh Data
+                        </button>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-blue-800 uppercase mb-1">Current Date</label>
+                            <input type="date" id="currentDateInput" readonly class="w-full sm:w-40 px-3 py-2 border border-gray-300 bg-gray-100 text-gray-500 rounded-md cursor-not-allowed focus:outline-none text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-blue-800 uppercase mb-1">Current Nifty Level</label>
+                            <input type="number" id="currentNiftyInput" class="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-gray-900 font-mono">
+                        </div>
+                        <div class="flex-grow flex items-end justify-end">
+                             <div id="statusMessage" class="text-xs text-right text-gray-500 h-4"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -112,19 +133,9 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
             <div class="overflow-x-auto custom-scrollbar">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr class="bg-gray-50">
-                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 w-64">
-                                Event Description
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                            <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Nifty Level</th>
-                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Years Elapsed</th>
-                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">8%</th>
-                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">10%</th>
-                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">12%</th>
-                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">14%</th>
-                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">16%</th>
+                    <thead class="bg-gray-50">
+                        <tr id="tableHeaderRow">
+                            <!-- Headers injected by JS -->
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
@@ -158,6 +169,11 @@
         // Default Configuration (Fallback)
         const DEFAULT_NIFTY = 25000; 
         const DEFAULT_DATE = new Date().toISOString().split('T')[0];
+        
+        // Filter Configuration
+        const ALL_RATES = [8, 10, 12, 14, 16];
+        // Default active rates as requested: 10, 12, 14
+        let activeRates = new Set([10, 12, 14]); 
 
         // Initial Data - Historical Events
         const events = [
@@ -182,6 +198,8 @@
         const dateInput = document.getElementById('currentDateInput');
         const niftyInput = document.getElementById('currentNiftyInput');
         const tableBody = document.getElementById('tableBody');
+        const tableHeaderRow = document.getElementById('tableHeaderRow');
+        const rateTogglesContainer = document.getElementById('rateToggles');
         const statusMessage = document.getElementById('statusMessage');
         
         // Gauge Elements
@@ -200,6 +218,52 @@
             const date = new Date(dateStr);
             return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
         };
+
+        // Initialize Filter UI
+        function initFilters() {
+            rateTogglesContainer.innerHTML = '';
+            ALL_RATES.forEach(rate => {
+                const btn = document.createElement('button');
+                const isActive = activeRates.has(rate);
+                btn.className = `rate-chip px-3 py-1 rounded-full text-xs border ${isActive ? 'active' : 'inactive'}`;
+                btn.textContent = `${rate}%`;
+                btn.onclick = () => toggleRate(rate);
+                rateTogglesContainer.appendChild(btn);
+            });
+        }
+
+        function toggleRate(rate) {
+            if (activeRates.has(rate)) {
+                // Prevent unchecking if it's the last one (optional UX choice, keeps table from breaking)
+                if(activeRates.size > 1) {
+                    activeRates.delete(rate);
+                }
+            } else {
+                activeRates.add(rate);
+            }
+            initFilters(); // Re-render buttons state
+            updateTable(); // Re-calculate everything
+        }
+
+        // Render Table Headers Dynamically
+        function renderHeaders() {
+            // Fixed Headers
+            let html = `
+                <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 w-64">Event Description</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Nifty Level</th>
+                <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Years Elapsed</th>
+            `;
+            
+            // Dynamic Rate Headers
+            ALL_RATES.forEach(rate => {
+                if(activeRates.has(rate)) {
+                    html += `<th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">${rate}%</th>`;
+                }
+            });
+            
+            tableHeaderRow.innerHTML = html;
+        }
 
         // Yahoo Finance Fetch Function
         async function fetchNiftyData() {
@@ -251,6 +315,8 @@
 
         // Main Calculation Function
         function updateTable() {
+            renderHeaders(); // Ensure headers match selected rates
+
             const currentDate = new Date(dateInput.value);
             const currentNifty = parseFloat(niftyInput.value);
             
@@ -284,24 +350,24 @@
                     </td>
                 `;
 
-                const rates = [8, 10, 12, 14, 16];
-                
-                rates.forEach(rate => {
-                    const projected = event.nifty * Math.pow((1 + rate/100), diffYears);
-                    
-                    const isGreen = projected > currentNifty;
-                    
-                    // Update Counters
-                    if(isGreen) greenCount++; else redCount++;
-                    totalCells++;
+                // Loop through ALL rates, but only render if active
+                ALL_RATES.forEach(rate => {
+                    if(activeRates.has(rate)) {
+                        const projected = event.nifty * Math.pow((1 + rate/100), diffYears);
+                        const isGreen = projected > currentNifty;
+                        
+                        // Update Counters (Only for visible/active rates)
+                        if(isGreen) greenCount++; else redCount++;
+                        totalCells++;
 
-                    const colorClass = isGreen ? 'nifty-green' : 'nifty-red';
-                    
-                    html += `
-                        <td class="px-4 py-4 text-right text-sm font-mono ${colorClass} border-l border-gray-100">
-                            ${formatNumber(projected)}
-                        </td>
-                    `;
+                        const colorClass = isGreen ? 'nifty-green' : 'nifty-red';
+                        
+                        html += `
+                            <td class="px-4 py-4 text-right text-sm font-mono ${colorClass} border-l border-gray-100">
+                                ${formatNumber(projected)}
+                            </td>
+                        `;
+                    }
                 });
 
                 row.innerHTML = html;
@@ -312,6 +378,12 @@
         }
 
         function updateWidget(green, red, total) {
+            // Avoid divide by zero
+            if (total === 0) {
+                gaugeText.textContent = "No Data";
+                return;
+            }
+
             // Calculate Score (0% = All Red/Bear, 100% = All Green/Bull)
             const sentimentScore = (green / total) * 100;
 
@@ -354,6 +426,7 @@
         niftyInput.addEventListener('input', updateTable);
 
         // Initial Load
+        initFilters();
         fetchNiftyData();
     </script>
 </body>

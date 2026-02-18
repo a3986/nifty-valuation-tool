@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nifty Valuation Indicator: Cheap or Costly?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .nifty-green { color: #16a34a; font-weight: 700; }
+        .nifty-red { color: #dc2626; font-weight: 700; }
+        .table-header { @apply px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0; }
+        
+        /* Custom scrollbar for table container */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Loading animation */
+        .animate-pulse-fast {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header & Valuation Widget -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Title & Controls -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Nifty Valuation Indicator</h1>
+                    <p class="text-gray-500 text-sm mt-1">Is the market Cheap or Costly? Analysis based on historical CAGRs.</p>
+                </div>
+                
+                <div class="mt-6 flex flex-col sm:flex-row gap-4 bg-blue-50 p-4 rounded-lg border border-blue-100 relative">
+                    <!-- Fetch Button -->
+                    <button onclick="fetchNiftyData()" class="absolute -top-3 right-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded-full shadow-sm transition-colors flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh Data
+                    </button>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-blue-800 uppercase mb-1">Current Date</label>
+                        <input type="date" id="currentDateInput" readonly class="w-full sm:w-40 px-3 py-2 border border-gray-300 bg-gray-100 text-gray-500 rounded-md cursor-not-allowed focus:outline-none text-sm font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-blue-800 uppercase mb-1">Current Nifty Level</label>
+                        <input type="number" id="currentNiftyInput" class="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-gray-900 font-mono">
+                    </div>
+                    <div class="flex-grow flex items-end justify-end">
+                         <div id="statusMessage" class="text-xs text-right text-gray-500 h-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Valuation Gauge Widget -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Market Sentiment</h3>
+                
+                <!-- Gauge Visual -->
+                <div class="relative w-full h-4 bg-gray-200 rounded-full mt-2 mb-4 overflow-hidden">
+                    <!-- Gradient Background: Red (Bear) -> Yellow (Neutral) -> Green (Bull) -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 opacity-80"></div>
+                    <!-- Marker -->
+                    <div id="gaugeMarker" class="absolute top-0 bottom-0 w-1 bg-black border border-white shadow-lg transition-all duration-700 ease-out" style="left: 50%"></div>
+                </div>
+
+                <!-- Text Status -->
+                <div id="gaugeText" class="text-2xl font-extrabold text-gray-800">Neutral</div>
+                <p id="gaugeSubText" class="text-xs text-gray-500 mt-1">Based on projected vs actual levels</p>
+                
+                <!-- Stats -->
+                <div class="flex gap-4 mt-4 text-xs font-medium border-t border-gray-100 pt-3 w-full justify-center">
+                    <div class="text-red-600 flex items-center gap-1">
+                        <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span id="bearCount">0</span> Costly
+                    </div>
+                    <div class="text-green-600 flex items-center gap-1">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span id="bullCount">0</span> Cheap
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Data Table -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 w-64">
+                                Event Description
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Nifty Level</th>
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Years Elapsed</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">8%</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">10%</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">12%</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">14%</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50/50">16%</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div class="flex flex-col md:flex-row justify-between gap-4 text-xs text-gray-500">
+                    <div>
+                        <strong>Note:</strong> Projections are calculated using CAGR. 
+                        <em>Projected = Historic Price × (1 + Rate)^Years</em>.
+                    </div>
+                    <div class="flex gap-4">
+                         <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-green-600"></span>
+                            <span><strong>Green:</strong> Projected > Current (Undervalued)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-red-600"></span>
+                            <span><strong>Red:</strong> Projected < Current (Overvalued)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default Configuration (Fallback)
+        const DEFAULT_NIFTY = 25000; 
+        const DEFAULT_DATE = new Date().toISOString().split('T')[0];
+
+        // Initial Data - Historical Events
+        const events = [
+            { name: "Dot Com Bubble Peak", date: "2000-01-04", nifty: 1756 },
+            { name: "Post 9/11 Lows", date: "2001-09-21", nifty: 850 },
+            { name: "Massive 2004-2007 Rally Begins (2004 Low)", date: "2004-05-17", nifty: 1388 },
+            { name: "Pre-GFC Top (Jan 2008)", date: "2008-01-15", nifty: 6287 },
+            { name: "Lehman Brothers Collapse Low (Oct 2008)", date: "2008-10-27", nifty: 2524 },
+            { name: "Intermediate Top (Jan 2010)", date: "2010-01-15", nifty: 5281 },
+            { name: "Currency Crisis / Fed Taper (Aug 2013)", date: "2013-08-28", nifty: 5285 },
+            { name: "PM Modi Comes to Power (May 2014)", date: "2014-05-16", nifty: 6858 },
+            { name: "Rally Exhaustion (March 2015)", date: "2015-03-04", nifty: 8922 },
+            { name: "Budget Day Low (Feb 2016)", date: "2016-02-29", nifty: 6987 },
+            { name: "Demonetization Low (Dec 2016)", date: "2016-12-26", nifty: 7908 },
+            { name: "Covid Crash Low (March 2020)", date: "2020-03-24", nifty: 7511 },
+            { name: "Post-Covid Peak (Oct 2021)", date: "2021-10-19", nifty: 18604 },
+            { name: "Russia-Ukraine War Low (June 2022)", date: "2022-06-17", nifty: 15183 },
+            { name: "Election Result Volatility (June 2024)", date: "2024-06-04", nifty: 21281 }
+        ];
+
+        // DOM Elements
+        const dateInput = document.getElementById('currentDateInput');
+        const niftyInput = document.getElementById('currentNiftyInput');
+        const tableBody = document.getElementById('tableBody');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        // Gauge Elements
+        const gaugeMarker = document.getElementById('gaugeMarker');
+        const gaugeText = document.getElementById('gaugeText');
+        const gaugeSubText = document.getElementById('gaugeSubText');
+        const bearCountEl = document.getElementById('bearCount');
+        const bullCountEl = document.getElementById('bullCount');
+
+        // Formatting Helpers
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(num);
+        };
+        
+        const formatDate = (dateStr) => {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+        };
+
+        // Yahoo Finance Fetch Function
+        async function fetchNiftyData() {
+            statusMessage.textContent = "Fetching live data...";
+            statusMessage.className = "text-xs text-right text-blue-600 font-medium animate-pulse-fast";
+            niftyInput.classList.add("bg-gray-50");
+
+            try {
+                // Using corsproxy.io to bypass CORS restrictions
+                const symbol = "%5ENSEI"; 
+                const proxyUrl = "https://corsproxy.io/?";
+                const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+                
+                const response = await fetch(proxyUrl + targetUrl);
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                const result = data.chart.result[0];
+                const meta = result.meta;
+                
+                const currentPrice = meta.regularMarketPrice;
+                
+                const marketTime = new Date(meta.regularMarketTime * 1000);
+                const offset = marketTime.getTimezoneOffset(); 
+                const localDate = new Date(marketTime.getTime() - (offset*60*1000));
+                const dateStr = localDate.toISOString().split('T')[0];
+
+                niftyInput.value = currentPrice;
+                dateInput.value = dateStr;
+                
+                statusMessage.textContent = `Updated: ${marketTime.toLocaleTimeString()}`;
+                statusMessage.className = "text-xs text-right text-green-600 font-medium";
+                
+                updateTable(); 
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                statusMessage.textContent = "Fetch failed. Using defaults.";
+                statusMessage.className = "text-xs text-right text-red-500";
+                
+                if(!niftyInput.value) niftyInput.value = DEFAULT_NIFTY;
+                if(!dateInput.value) dateInput.value = DEFAULT_DATE;
+                updateTable();
+            } finally {
+                niftyInput.classList.remove("bg-gray-50");
+            }
+        }
+
+        // Main Calculation Function
+        function updateTable() {
+            const currentDate = new Date(dateInput.value);
+            const currentNifty = parseFloat(niftyInput.value);
+            
+            tableBody.innerHTML = '';
+            
+            // Counters for the Widget
+            let greenCount = 0; // Cheap/Undervalued
+            let redCount = 0;   // Costly/Overvalued
+            let totalCells = 0;
+
+            events.forEach(event => {
+                const eventDate = new Date(event.date);
+                const diffTime = Math.abs(currentDate - eventDate);
+                const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition-colors';
+
+                let html = `
+                    <td class="px-4 py-4 text-sm font-medium text-gray-900 sticky left-0 bg-white border-r border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sm:shadow-none sm:bg-transparent">
+                        ${event.name}
+                    </td>
+                    <td class="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
+                        ${formatDate(event.date)}
+                    </td>
+                    <td class="px-4 py-4 text-right text-sm font-semibold text-gray-800 font-mono bg-gray-50/50">
+                        ${formatNumber(event.nifty)}
+                    </td>
+                    <td class="px-4 py-4 text-center text-sm text-gray-600 font-mono">
+                        ${diffYears.toFixed(2)}
+                    </td>
+                `;
+
+                const rates = [8, 10, 12, 14, 16];
+                
+                rates.forEach(rate => {
+                    const projected = event.nifty * Math.pow((1 + rate/100), diffYears);
+                    
+                    const isGreen = projected > currentNifty;
+                    
+                    // Update Counters
+                    if(isGreen) greenCount++; else redCount++;
+                    totalCells++;
+
+                    const colorClass = isGreen ? 'nifty-green' : 'nifty-red';
+                    
+                    html += `
+                        <td class="px-4 py-4 text-right text-sm font-mono ${colorClass} border-l border-gray-100">
+                            ${formatNumber(projected)}
+                        </td>
+                    `;
+                });
+
+                row.innerHTML = html;
+                tableBody.appendChild(row);
+            });
+
+            updateWidget(greenCount, redCount, totalCells);
+        }
+
+        function updateWidget(green, red, total) {
+            // Calculate Score (0% = All Red/Bear, 100% = All Green/Bull)
+            const sentimentScore = (green / total) * 100;
+
+            // Update Counts
+            bearCountEl.textContent = red;
+            bullCountEl.textContent = green;
+
+            // Update Marker Position
+            gaugeMarker.style.left = `${sentimentScore}%`;
+
+            // Update Text Logic
+            let text = "Neutral";
+            let subText = "Market is fairly valued";
+            let textColor = "text-yellow-600";
+
+            if (sentimentScore >= 66) {
+                text = "Strong Buy (Bull)";
+                subText = "Market is significantly undervalued";
+                textColor = "text-green-600";
+            } else if (sentimentScore >= 55) {
+                text = "Buy (Mild Bull)";
+                subText = "Market is slightly undervalued";
+                textColor = "text-green-500";
+            } else if (sentimentScore <= 33) {
+                text = "Strong Sell (Bear)";
+                subText = "Market is significantly expensive";
+                textColor = "text-red-600";
+            } else if (sentimentScore <= 45) {
+                text = "Caution (Mild Bear)";
+                subText = "Market is slightly expensive";
+                textColor = "text-red-500";
+            }
+
+            gaugeText.textContent = text;
+            gaugeText.className = `text-xl font-extrabold ${textColor}`;
+            gaugeSubText.textContent = subText;
+        }
+
+        // Event Listeners
+        niftyInput.addEventListener('input', updateTable);
+
+        // Initial Load
+        fetchNiftyData();
+    </script>
+</body>
+</html>
